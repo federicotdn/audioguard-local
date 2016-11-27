@@ -10,22 +10,31 @@ namespace audioguard {
 
         public AudioGuard() {
             audioDevice = new CoreAudioController().DefaultPlaybackDevice;
-            ws = new WebSocket("ws://10.16.66.58:9000");
+            ws = new WebSocket("ws://127.0.0.1:9000");
             ws.OnMessage += OnMessage;
         }
 
         private void OnMessage(object sender, MessageEventArgs e) {
             Console.WriteLine(e.Data);
-            int volume = 50;
-            int.TryParse(e.Data, out volume);
-
-            if (volume < 0) {
-                volume = 0;
-            } else if (volume > 100) {
-                volume = 100;
+            int pctgDiff;
+            bool ok = int.TryParse(e.Data, out pctgDiff);
+            if (!ok) {
+                Console.WriteLine("Unable to parse int: " + e.Data);
+                return;
             }
 
-            audioDevice.Volume = volume;
+            float pctg = 1.0f + (pctgDiff / 100.0f);
+            float newVolume = (float)audioDevice.Volume * pctg;
+
+            Console.WriteLine("Setting new volume at: " + newVolume.ToString());
+
+            if (newVolume < 0) {
+                newVolume = 0;
+            } else if (newVolume > 100) {
+                newVolume = 100;
+            }
+
+            audioDevice.Volume = newVolume;
         }
 
         public void Connect() {
